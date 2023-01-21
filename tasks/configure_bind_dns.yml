@@ -1,13 +1,3 @@
----
-# Configure OCP4 DNS Server on Helper Node
-
-- hosts: all
-  vars_files:
-    - ../vars/main.yml
-  handlers:
-  - import_tasks: ../handlers/main.yml
-
-  tasks:
   - name: Setup named configuration files
     block:
     - name: Write out named file

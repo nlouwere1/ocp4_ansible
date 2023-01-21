@@ -1,0 +1,149 @@
+---
+
+
+- hosts: all
+  vars_files:
+    - ./vars/main.yml
+  handlers:
+  - import_tasks: ./handlers/main.yml
+
+  tasks:
+  - name: install packages
+    yum:
+      name: "{{ item }}"
+      state: latest
+    loop:
+        - httpd
+        - dhcp-server
+        - git 
+        - vim 
+        - wget 
+        - curl 
+        - bash-completion 
+        - tree 
+        - tar 
+        - libselinux-python3
+        - bind 
+        - bind-utils
+        - tftp-server 
+        - syslinux
+        - haproxy
+  - name: copy configs
+    copy:
+        src: /etc/dhcp/dhcpd.conf
+        remote_src: True
+        dest: /etc/dhcp/dhcpd.conf.bak
+    ignore_errors: yes
+  - name: remove old file dhcpd
+    file:
+      path: /etc/dhcp/dhcpd.conf
+      state: absent
+  - name: configure dhcp
+    include_tasks: ./tasks/configure_dhcpd.yml
+  - name: dns setup serial
+    copy:
+      src: ./files/set-dns-serial.sh
+      dest: /usr/local/bin/set-dns-serial.sh
+      mode: u=rwx,g=rwx,o=rx
+      owner: root
+      group: root
+  - name: setup the dns
+    include_tasks: ./tasks/configure_bind_dns.yml
+  - name: firewall config
+    firewalld:
+      service: "{{ item }}"
+      immediate: true
+      permanent: true
+      state: enabled
+    loop:
+      - http
+      - https
+      - dhcp
+      - tftp
+      - dns
+  - name: firewall port config
+    firewalld:
+      port: "{{ item }}"
+      immediate: true
+      permanent: true
+      state: enabled
+    loop:
+      - 8080/tcp
+      - 6443/tcp
+      - 22623/tcp
+  - name: install tftp.service
+    copy:
+      src: ./files/helper-tftp.service
+      dest: /etc/systemd/system/helper-tftp.service
+  - name: install start-tftp.sh
+    copy:
+      src: ./files/start-tftp.sh
+      dest: /usr/local/bin/start-tftp.sh
+      mode: u=rwx,g=rwx,o=rx
+      owner: root
+      group: root
+  - name: copy tftp content
+    ansible.posix.synchronize:
+      src: /usr/share/syslinux/
+      dest: /var/lib/tftpboot/
+  - name: creating rhcos image files
+    file:
+      path: /var/lib/tftpboot/rhcos
+      state: directory
+      mode: 0775
+  - name: download rhcos kernel
+    ansible.builtin.get_url:
+      url: https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/rhcos-installer-kernel-x86_64
+      dest: /var/lib/tftpboot/rhcos/kernel
+      mode: '0664'
+  - name: download rhcos initramfs
+    ansible.builtin.get_url:
+      url: https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/rhcos-installer-initramfs.x86_64.img
+      dest: /var/lib/tftpboot/rhcos/initramfs.img
+      mode: '0664'
+  - name: creating rhcos live image directory
+    file:
+      path: /var/www/html/rhcos
+      state: directory
+      mode: 0775
+  - name: downloading rhcos live image
+    ansible.builtin.get_url:
+      url: https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/latest/rhcos-live-rootfs.x86_64.img
+      dest: /var/www/html/rhcos/rootfs.img
+      mode: 664
+  - name: changing http port to 8080
+    replace:
+      path: /etc/httpd/conf/httpd.conf
+      regexp: '^Listen 80$'
+      replace: "Listen 8080"
+    notify: 
+      - restart httpd
+  - name: creating pxe directory
+    file:
+      path: /var/lib/tftpboot/pxelinux.cfg
+      state: directory
+      mode: 0775
+  - name: configure pxe
+    include_tasks: ./tasks/configure_tftp_pxe.yml
+  - name: sebool haproxy
+    ansible.posix.seboolean:
+      name: haproxy_connect_any
+      state: yes
+      persistent: yes
+  - name: remove old file haproxy
+    file: 
+      path: /etc/haproxy/haproxy.cfg
+      state: absent
+  - name: Write out haproxy config file
+    template:
+      src: ./templates/haproxy.cfg.j2
+      dest: /etc/haproxy/haproxy.cfg
+    notify:
+      - restart haproxy
+  - name: configure SELinux to allow web servers to use ports 6443,22623,32700
+    seport:
+      ports: ['6443', '22623', '32700']
+      proto: tcp
+      setype: http_port_t
+      state: present
+
