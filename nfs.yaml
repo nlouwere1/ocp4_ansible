@@ -1,0 +1,48 @@
+---
+- hosts: all
+  tasks:
+  - name: install packages
+    yum:
+      name: "{{ item }}"
+      state: latest
+    loop:
+        - nfs-utils
+
+  - name: edit idmapd.conf
+    replace:
+      path: /etc/idmapd.conf 
+      regexp: '#Domain = local.domain.edu'
+      replace: "Domain = nico.coffee"
+
+  - name: create exports file
+    ansible.builtin.lineinfile:
+      path: /etc/exports
+      line: /export/ocp 192.168.0.0/16(rw,no_root_squash) 
+      create: yes
+  - name: creating nfs directory
+    file:
+      path: /export/ocp
+      state: directory
+      mode: 0777
+  - name: firewall config
+    firewalld:
+      service: "{{ item }}"
+      immediate: true
+      permanent: true
+      state: enabled
+    loop:
+      - nfs
+      - nfs3
+      - mountd
+      - rpc-bind
+  - name: restart nfs
+    service:
+      name: nfs-server
+      state: started
+      enabled: yes
+  - name: restart rpcbind
+    service:
+      name: rpcbind
+      state: started
+      enabled: yes
+
