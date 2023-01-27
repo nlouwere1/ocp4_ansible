@@ -1,5 +1,5 @@
 #!/bin/bash
-sudo virsh --connect qemu:///system start bootstrap.ocp4.nico.coffee
+#sudo virsh --connect qemu:///system start bootstrap.ocp4.nico.coffee
 sudo virsh --connect qemu:///system start bastion.nico.coffee
 echo sleeping for 120 sec
 sleep 120
@@ -8,8 +8,8 @@ for i in {1..3}; do
 	sudo virsh --connect qemu:///system start master0${i}.ocp4.nico.coffee
 done
 
-echo sleeping for 120 sec
-sleep 120
+echo sleeping for 5 min
+sleep 300
 
 for i in {1..3}; do
         sudo virsh --connect qemu:///system start worker0${i}.ocp4.nico.coffee

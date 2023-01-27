@@ -1,9 +1,10 @@
 #!/bin/bash
-sudo virsh --connect qemu:///system start bootstrap.ocp4.nico.coffee
+sudo virsh shutdown bootstrap.ocp4.nico.coffee
 
 for i in {1..3}; do
-	sudo virsh --connect qemu:///system start master0${i}.ocp4.nico.coffee
-	sudo virsh --connect qemu:///system start worker0${i}.ocp4.nico.coffee
+	sudo virsh shutdown master0${i}.ocp4.nico.coffee
+	sudo virsh shutdown worker0${i}.ocp4.nico.coffee
 done
 
-sudo virsh --connect qemu:///system start bastion.nico.coffee
+sudo virsh shutdown bastion.nico.coffee
+
