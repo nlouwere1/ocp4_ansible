@@ -7,7 +7,7 @@ helper:
   ipaddr: "192.168.100.254"                #current IP address of the helper
   networkifacename: "enp1s0"                 #interface of the helper node,ACTUAL name of the interface, NOT the NetworkManager name
 dns:
-  domain: "example.com"                    #DNS server domain. Should match  baseDomain inside the install-config.yaml file.
+  domain: "nico.coffee"                    #DNS server domain. Should match  baseDomain inside the install-config.yaml file.
   clusterid: "ocp4"                        #needs to match what you will for metadata.name inside the install-config.yaml file
   forwarder1: "8.8.8.8"                    #DNS forwarder
   forwarder2: "1.1.1.1"                    #second DNS forwarder
